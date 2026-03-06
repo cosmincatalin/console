@@ -142,6 +142,7 @@
       "ip": "npm:neoip@2.1.0",
       "miniflare@3>undici": "^7.18.2",
       "tailwindcss": "3.4.17",
+      "@graphql-hive/laboratory>tailwindcss": "4.1.18",
       "@hive/app>tailwindcss": "4.1.18",
       "@tailwindcss/node>tailwindcss": "4.1.18",
       "@tailwindcss/vite>tailwindcss": "4.1.18",
@@ -155,6 +156,7 @@
       "seroval@<1.4.1": "^1.4.1",
       "fast-xml-parser@<5.3.8": "^5.3.8",
       "minimatch@10.x.x": "^10.2.2",
+      "amqplib": "^0.8.0",
       "minimatch@9.x.x": "^9.0.6",
       "minimatch@3.x.x": "^3.1.3",
       "minimatch@4.x.x": "^4.2.4",
@@ -179,7 +181,8 @@
       "bentocache": "patches/bentocache.patch",
       "nextra": "patches/nextra.patch",
       "nextra-theme-docs": "patches/nextra-theme-docs.patch",
-      "@graphql-codegen/schema-ast": "patches/@graphql-codegen__schema-ast.patch"
+      "@graphql-codegen/schema-ast": "patches/@graphql-codegen__schema-ast.patch",
+      "@fastify/vite": "patches/@fastify__vite.patch"
     },
     "onlyBuiltDependencies": [
       "msw"
