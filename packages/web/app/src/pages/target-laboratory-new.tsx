@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
-import { buildSchema, introspectionFromSchema } from 'graphql';
+import { buildSchema, introspectionFromSchema, Kind, parse, print } from 'graphql';
 import { throttle } from 'lodash';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from 'urql';
@@ -43,7 +43,7 @@ import {
   LaboratoryTab,
   LaboratoryTabOperation,
 } from '@graphql-hive/laboratory';
-import { Link as RouterLink } from '@tanstack/react-router';
+import { Link as RouterLink, useRouter } from '@tanstack/react-router';
 
 function useApiTabValueState(graphqlEndpointUrl: string | null) {
   const [state, setState] = useResetState<'mockApi' | 'linkedApi'>(() => {
@@ -477,7 +477,42 @@ function useLaboratoryState(props: {
       targetSlug: props.targetSlug,
     });
 
+  const router = useRouter();
+  const { search } = router.latestLocation;
+  const operationString =
+    'operationString' in search && typeof search.operationString === 'string'
+      ? search.operationString
+      : null;
+
+  const operationFromQueryString = useMemo(() => {
+    if (operationString) {
+      try {
+        const parsed = parse(operationString);
+        const name = parsed.definitions.find(v => v.kind === Kind.OPERATION_DEFINITION)?.name
+          ?.value;
+
+        return {
+          id: crypto.randomUUID(),
+          name: name ?? 'Untitled',
+          query: print(parsed),
+          variables: '{}',
+          headers: '{}',
+          extensions: '{}',
+        } satisfies LaboratoryOperation;
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+
+    return null;
+  }, [operationString]);
+
   const defaultOperations = useMemo(() => {
+    if (operationFromQueryString) {
+      return [...getLocalStorageState('operations', []), operationFromQueryString];
+    }
+
     if (currentOperation) {
       return [
         ...getLocalStorageState('operations', []),
@@ -493,9 +528,20 @@ function useLaboratoryState(props: {
     }
 
     return getLocalStorageState('operations', []);
-  }, [currentOperation]);
+  }, [currentOperation, operationFromQueryString]);
 
   const defaultTabs = useMemo(() => {
+    if (operationFromQueryString) {
+      return [
+        ...getLocalStorageState('tabs', []),
+        {
+          id: operationFromQueryString.id,
+          type: 'operation',
+          data: operationFromQueryString,
+        } satisfies LaboratoryTabOperation,
+      ];
+    }
+
     if (currentOperation) {
       return [
         ...getLocalStorageState('tabs', []),
@@ -515,7 +561,7 @@ function useLaboratoryState(props: {
     }
 
     return getLocalStorageState('tabs', []);
-  }, [currentOperation]);
+  }, [currentOperation, operationFromQueryString]);
 
   const operationIdFromSearch = useOperationFromQueryString();
 
