@@ -225,7 +225,9 @@ export default class SchemaCheck extends Command<typeof SchemaCheck> {
         throw new MissingRegistryTokenError();
       }
 
-      const sdl = await loadSchema(file).catch(e => {
+      const sdl = await loadSchema('first-federation-then-graphql-introspection', file, {
+        logger: this.logger,
+      }).catch(e => {
         throw new SchemaFileNotFoundError(file, e);
       });
       const git = await gitInfo(() => {

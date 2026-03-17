@@ -232,7 +232,7 @@ introspects a GraphQL Schema
 
 ```
 USAGE
-  $ hive introspect LOCATION [--debug] [--write <value>] [--header <value>...]
+  $ hive introspect LOCATION [--debug] [--write <value>] [--header <value>...] [--type <value>]
 
 ARGUMENTS
   LOCATION  GraphQL Schema location (URL or file path/glob)
@@ -240,6 +240,8 @@ ARGUMENTS
 FLAGS
   --debug              Whether debug output for HTTP calls and similar should be enabled.
   --header=<value>...  HTTP header to add to the introspection request (in key:value format)
+  --type=<value>       Type of the endpoint (possible types: 'federation', 'graphql'). If not provided federation
+                       introspection followed by graphql introspection is attempted.
   --write=<value>      Write to a file (possible extensions: .graphql, .gql, .gqls, .graphqls, .json)
 
 DESCRIPTION
