@@ -21,7 +21,7 @@ const tokenFields = psql`
   , "token_alias" AS "tokenAlias"
   , "name"
   , to_json("created_at") AS "date"
-  , "last_used_at" AS "lastUsedAt"
+  , to_json("last_used_at") AS "lastUsedAt"
   , "organization_id" AS "organization"
   , "project_id" AS "project"
   , "target_id" AS "target"
@@ -75,7 +75,7 @@ export async function createTokenStorage(
           LIMIT 1
         `,
         )
-        .then(TokenModel.parse);
+        .then(TokenModel.nullable().parse);
     },
     async createToken({
       token,
