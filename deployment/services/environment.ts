@@ -50,7 +50,7 @@ export function prepareEnvironment(input: {
       },
       envoy: {
         replicas: isProduction || isStaging ? 3 : 1,
-        cpuLimit: isProduction || isStaging ? '1500m' : '120m',
+        cpuLimit: isProduction ? '1500m' : isStaging ? '300m' : '120m',
         memoryLimit: isProduction || isStaging ? '2Gi' : '200Mi',
         timeouts: {
           idleTimeout: 905,
