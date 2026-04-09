@@ -183,7 +183,7 @@ export interface OIDCIntegration {
   id: string;
   linkedOrganizationId: string;
   clientId: string;
-  encryptedClientSecret: string;
+  encryptedClientSecret: string | null;
   tokenEndpoint: string;
   userinfoEndpoint: string;
   authorizationEndpoint: string;
@@ -193,6 +193,7 @@ export interface OIDCIntegration {
   requireInvitation: boolean;
   defaultMemberRoleId: string | null;
   defaultResourceAssignment: ResourceAssignmentGroup | null;
+  useFederatedCredential: boolean;
 }
 
 export interface CDNAccessToken {

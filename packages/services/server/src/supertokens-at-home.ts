@@ -800,9 +800,11 @@ export async function registerSupertokensAtHome(
             token_endpoint: oidcIntegration.tokenEndpoint,
           },
           oidcIntegration.clientId,
-          {
-            client_secret: crypto.decrypt(oidcIntegration.encryptedClientSecret),
-          },
+          oidcIntegration.useFederatedCredential || !oidcIntegration.encryptedClientSecret
+            ? undefined
+            : {
+                client_secret: crypto.decrypt(oidcIntegration.encryptedClientSecret),
+              },
         );
         oidClient.allowInsecureRequests(oidClientConfig);
 
@@ -1304,20 +1306,49 @@ export async function registerSupertokensAtHome(
           access_token: z.string(),
         });
 
+        const grantParams: Record<string, string> = {
+          grant_type: 'authorization_code',
+          code_verifier: cacheRecord.pkceVerifier,
+          code: parsedBody.data.redirectURIInfo.redirectURIQueryParams.code ?? '',
+          redirect_uri: current_url.toString(),
+          client_id: oidcIntegration.clientId,
+        };
+
+        if (
+          oidcIntegration.useFederatedCredential ||
+          !oidcIntegration.encryptedClientSecret
+        ) {
+          // Azure Workload Identity: use client_assertion with the federated token file
+          const tokenFilePath = process.env['AZURE_FEDERATED_TOKEN_FILE'];
+          if (!tokenFilePath) {
+            req.log.error('AZURE_FEDERATED_TOKEN_FILE environment variable is not set');
+            broadcastLog(
+              oidcIntegration.id,
+              'Federated credential is configured but AZURE_FEDERATED_TOKEN_FILE environment variable is not set. ' +
+                'Ensure the pod has Azure Workload Identity configured.',
+            );
+            return rep.status(200).send({
+              status: 'SIGN_IN_UP_NOT_ALLOWED',
+              reason: 'Sign in failed. Please contact your organization administrator.',
+            });
+          }
+
+          const { readFileSync } = await import('node:fs');
+          const federatedToken = readFileSync(tokenFilePath, 'utf-8');
+          grantParams['client_assertion_type'] =
+            'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
+          grantParams['client_assertion'] = federatedToken;
+        } else {
+          grantParams['client_secret'] = crypto.decrypt(oidcIntegration.encryptedClientSecret);
+        }
+
         const grantResponse = await fetch(oidcIntegration.tokenEndpoint, {
           method: 'POST',
           headers: {
             'content-type': 'application/x-www-form-urlencoded',
             accept: 'application/json',
           },
-          body: new URLSearchParams({
-            grant_type: 'authorization_code',
-            code_verifier: cacheRecord.pkceVerifier,
-            code: parsedBody.data.redirectURIInfo.redirectURIQueryParams.code ?? '',
-            redirect_uri: current_url.toString(),
-            client_id: oidcIntegration.clientId,
-            client_secret: crypto.decrypt(oidcIntegration.encryptedClientSecret),
-          }),
+          body: new URLSearchParams(grantParams),
         });
 
         if (grantResponse.status != 200) {
