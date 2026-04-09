@@ -174,7 +174,7 @@ export class OIDCIntegrationsProvider {
         organizationId: args.organizationId,
         clientId: clientIdResult.data,
         encryptedClientSecret:
-          clientSecretResult.data != null ? this.crypto.encrypt(clientSecretResult.data) : null,
+          clientSecretResult.data !== null ? this.crypto.encrypt(clientSecretResult.data) : null,
         tokenEndpoint: tokenEndpointResult.data,
         userinfoEndpoint: userinfoEndpointResult.data,
         authorizationEndpoint: authorizationEndpointResult.data,
