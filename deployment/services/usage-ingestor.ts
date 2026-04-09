@@ -55,9 +55,6 @@ export function deployUsageIngestor({
         KAFKA_CONCURRENCY: kafka.config.concurrency,
         KAFKA_TOPIC: kafka.config.topic,
         KAFKA_CONSUMER_GROUP: kafka.config.consumerGroup,
-        ...('oauthbearerScope' in kafka.config
-          ? { KAFKA_SASL_OAUTHBEARER_SCOPE: kafka.config.oauthbearerScope }
-          : {}),
         HEARTBEAT_ENDPOINT: heartbeat ?? '',
         MIGRATION_V2_INGEST_AFTER_UTC: clickHouseMigrationV2DataIngestionStartDate,
       },
@@ -80,18 +77,8 @@ export function deployUsageIngestor({
     .withSecret('CLICKHOUSE_USERNAME', clickhouse.secret, 'username')
     .withSecret('CLICKHOUSE_PASSWORD', clickhouse.secret, 'password')
     .withSecret('CLICKHOUSE_PROTOCOL', clickhouse.secret, 'protocol')
-    .withConditionalSecret(
-      kafka.config.saslMechanism !== 'oauthbearer',
-      'KAFKA_SASL_USERNAME',
-      kafka.secret,
-      'saslUsername',
-    )
-    .withConditionalSecret(
-      kafka.config.saslMechanism !== 'oauthbearer',
-      'KAFKA_SASL_PASSWORD',
-      kafka.secret,
-      'saslPassword',
-    )
+    .withSecret('KAFKA_SASL_USERNAME', kafka.secret, 'saslUsername')
+    .withSecret('KAFKA_SASL_PASSWORD', kafka.secret, 'saslPassword')
     .withSecret('KAFKA_SSL', kafka.secret, 'ssl')
     .withSecret('KAFKA_BROKER', kafka.secret, 'endpoint')
     .withConditionalSecret(sentry.enabled, 'SENTRY_DSN', sentry.secret, 'dsn')

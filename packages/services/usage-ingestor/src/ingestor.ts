@@ -12,7 +12,6 @@ import {
   processDuration,
   reportMessageBytes,
 } from './metrics';
-import { createOAuthBearerProvider } from './oauth-bearer-provider';
 import { createProcessor } from './processor';
 import { ClickHouseConfig, createWriter } from './writer';
 
@@ -55,30 +54,25 @@ export function createIngestor(config: {
     brokers: [config.kafka.connection.broker],
     ssl: config.kafka.connection.ssl,
     sasl:
-      config.kafka.connection.sasl?.mechanism === 'oauthbearer'
+      config.kafka.connection.sasl?.mechanism === 'plain'
         ? {
-            mechanism: 'oauthbearer' as const,
-            oauthBearerProvider: createOAuthBearerProvider(config.kafka.connection.sasl.scope),
+            mechanism: 'plain',
+            username: config.kafka.connection.sasl.username,
+            password: config.kafka.connection.sasl.password,
           }
-        : config.kafka.connection.sasl?.mechanism === 'plain'
+        : config.kafka.connection.sasl?.mechanism === 'scram-sha-256'
           ? {
-              mechanism: 'plain',
+              mechanism: 'scram-sha-256',
               username: config.kafka.connection.sasl.username,
               password: config.kafka.connection.sasl.password,
             }
-          : config.kafka.connection.sasl?.mechanism === 'scram-sha-256'
+          : config.kafka.connection.sasl?.mechanism === 'scram-sha-512'
             ? {
-                mechanism: 'scram-sha-256',
+                mechanism: 'scram-sha-512',
                 username: config.kafka.connection.sasl.username,
                 password: config.kafka.connection.sasl.password,
               }
-            : config.kafka.connection.sasl?.mechanism === 'scram-sha-512'
-              ? {
-                  mechanism: 'scram-sha-512',
-                  username: config.kafka.connection.sasl.username,
-                  password: config.kafka.connection.sasl.password,
-                }
-              : undefined,
+            : undefined,
     logLevel: logLevel.INFO,
     logCreator() {
       return entry => {

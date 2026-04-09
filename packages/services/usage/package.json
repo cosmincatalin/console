@@ -9,7 +9,6 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@azure/identity": "4.13.1",
     "@hive/api": "workspace:*",
     "@hive/postgres": "workspace:*",
     "@hive/service-common": "workspace:*",
