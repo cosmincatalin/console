@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@azure/identity": "4.13.1",
     "@graphql-hive/core": "workspace:*",
     "@hive/service-common": "workspace:*",
     "@hive/usage-common": "workspace:*",

@@ -12,23 +12,36 @@ export class KafkaSecret extends ServiceSecret<{
 
 export function deployKafka() {
   const eventhubConfig = new pulumi.Config('eventhub');
-  const secret = new KafkaSecret('kafka', {
-    ssl: '1',
-    saslUsername: '$ConnectionString',
-    saslPassword: eventhubConfig.requireSecret('key'),
-    endpoint: eventhubConfig.require('endpoint'),
-  });
+  const saslMechanism = eventhubConfig.get('saslMechanism') ?? 'plain';
+
+  const secret =
+    saslMechanism === 'oauthbearer'
+      ? new KafkaSecret('kafka', {
+          ssl: '1',
+          saslUsername: '',
+          saslPassword: '',
+          endpoint: eventhubConfig.require('endpoint'),
+        })
+      : new KafkaSecret('kafka', {
+          ssl: '1',
+          saslUsername: '$ConnectionString',
+          saslPassword: eventhubConfig.requireSecret('key'),
+          endpoint: eventhubConfig.require('endpoint'),
+        });
 
   return {
     secret,
     config: {
-      saslMechanism: 'plain',
+      saslMechanism,
       concurrency: '1',
       bufferSize: eventhubConfig.require('bufferSize'),
       bufferInterval: eventhubConfig.require('bufferInterval'),
       bufferDynamic: eventhubConfig.require('bufferDynamic'),
       topic: eventhubConfig.require('topic'),
       consumerGroup: eventhubConfig.require('consumerGroup'),
+      ...(saslMechanism === 'oauthbearer'
+        ? { oauthbearerScope: eventhubConfig.require('oauthbearerScope') }
+        : {}),
     },
   };
 }

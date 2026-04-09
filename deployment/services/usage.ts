@@ -69,6 +69,9 @@ export function deployUsage({
           KAFKA_BUFFER_INTERVAL: kafka.config.bufferInterval,
           KAFKA_BUFFER_DYNAMIC: kafkaBufferDynamic,
           KAFKA_TOPIC: kafka.config.topic,
+          ...('oauthbearerScope' in kafka.config
+            ? { KAFKA_SASL_OAUTHBEARER_SCOPE: kafka.config.oauthbearerScope }
+            : {}),
           TOKENS_ENDPOINT: serviceLocalEndpoint(tokens.service),
           COMMERCE_ENDPOINT: serviceLocalEndpoint(commerce.service),
           OPENTELEMETRY_COLLECTOR_ENDPOINT:
@@ -110,8 +113,18 @@ export function deployUsage({
       .withSecret('POSTGRES_DB', postgres.pgBouncerSecret, 'database')
       .withSecret('POSTGRES_SSL', postgres.pgBouncerSecret, 'ssl')
       // Kafka
-      .withSecret('KAFKA_SASL_USERNAME', kafka.secret, 'saslUsername')
-      .withSecret('KAFKA_SASL_PASSWORD', kafka.secret, 'saslPassword')
+      .withConditionalSecret(
+        kafka.config.saslMechanism !== 'oauthbearer',
+        'KAFKA_SASL_USERNAME',
+        kafka.secret,
+        'saslUsername',
+      )
+      .withConditionalSecret(
+        kafka.config.saslMechanism !== 'oauthbearer',
+        'KAFKA_SASL_PASSWORD',
+        kafka.secret,
+        'saslPassword',
+      )
       .withSecret('KAFKA_SSL', kafka.secret, 'ssl')
       .withSecret('KAFKA_BROKER', kafka.secret, 'endpoint')
       .withConditionalSecret(sentry.enabled, 'SENTRY_DSN', sentry.secret, 'dsn')

@@ -59,6 +59,10 @@ const KafkaModel = zod.union([
     KAFKA_SASL_USERNAME: zod.string(),
     KAFKA_SASL_PASSWORD: zod.string(),
   }),
+  KafkaBaseModel.extend({
+    KAFKA_SASL_MECHANISM: zod.literal('oauthbearer'),
+    KAFKA_SASL_OAUTHBEARER_SCOPE: zod.string(),
+  }),
 ]);
 
 const ClickHouseModel = zod.object({
@@ -182,13 +186,18 @@ export const env = {
             : true
           : false,
       sasl:
-        kafka.KAFKA_SASL_MECHANISM != null
+        kafka.KAFKA_SASL_MECHANISM === 'oauthbearer'
           ? {
-              mechanism: kafka.KAFKA_SASL_MECHANISM,
-              username: kafka.KAFKA_SASL_USERNAME,
-              password: kafka.KAFKA_SASL_PASSWORD,
+              mechanism: 'oauthbearer' as const,
+              scope: kafka.KAFKA_SASL_OAUTHBEARER_SCOPE,
             }
-          : null,
+          : kafka.KAFKA_SASL_MECHANISM != null
+            ? {
+                mechanism: kafka.KAFKA_SASL_MECHANISM,
+                username: kafka.KAFKA_SASL_USERNAME,
+                password: kafka.KAFKA_SASL_PASSWORD,
+              }
+            : null,
     },
   },
   clickhouse: {
