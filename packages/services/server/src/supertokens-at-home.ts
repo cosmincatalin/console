@@ -1333,8 +1333,8 @@ export async function registerSupertokensAtHome(
             });
           }
 
-          const { readFileSync } = await import('node:fs');
-          const federatedToken = readFileSync(tokenFilePath, 'utf-8');
+          const { readFile } = await import("node:fs/promises");
+          const federatedToken = await readFile(tokenFilePath, "utf-8");
           grantParams['client_assertion_type'] =
             'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
           grantParams['client_assertion'] = federatedToken;
