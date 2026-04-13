@@ -305,7 +305,7 @@ export class OIDCIntegrationsProvider {
           fieldErrors: {
             clientId: null,
             clientSecret:
-              'A client secret is required when federated credential is not enabled.',
+              'Either a client secret or federated credential must be enabled.',
             tokenEndpoint: null,
             userinfoEndpoint: null,
             authorizationEndpoint: null,
