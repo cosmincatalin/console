@@ -49,6 +49,7 @@ const EnvironmentModel = zod.object({
   FEATURE_FLAGS_OTEL_TRACING_ENABLED: emptyString(
     zod.union([zod.literal('1'), zod.literal('0')]).optional(),
   ),
+  AZURE_FEDERATED_TOKEN_FILE: emptyString(zod.string().optional()),
 });
 
 const CommerceModel = zod.object({
@@ -576,4 +577,5 @@ export const env = {
     /** Whether OTEL tracing should be enabled for all organizations. */
     otelTracingEnabled: base.FEATURE_FLAGS_OTEL_TRACING_ENABLED === '1',
   },
+  azureFederatedTokenFile: base.AZURE_FEDERATED_TOKEN_FILE ?? null,
 } as const;
