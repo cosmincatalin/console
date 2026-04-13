@@ -1319,7 +1319,7 @@ export async function registerSupertokensAtHome(
           !oidcIntegration.encryptedClientSecret
         ) {
           // Azure Workload Identity: use client_assertion with the federated token file
-          const tokenFilePath = process.env['AZURE_FEDERATED_TOKEN_FILE'];
+          const tokenFilePath = env.azureFederatedTokenFile;
           if (!tokenFilePath) {
             req.log.error('AZURE_FEDERATED_TOKEN_FILE environment variable is not set');
             broadcastLog(
