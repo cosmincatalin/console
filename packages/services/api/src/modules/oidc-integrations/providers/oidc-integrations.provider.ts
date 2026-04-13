@@ -292,6 +292,28 @@ export class OIDCIntegrationsProvider {
       authorizationEndpointResult.success &&
       additionalScopesResult.success
     ) {
+      const effectiveUseFederatedCredential =
+        args.useFederatedCredential ?? integration.useFederatedCredential;
+      const effectiveHasClientSecret = clientSecretResult.data
+        ? true
+        : integration.encryptedClientSecret !== null;
+
+      if (!effectiveUseFederatedCredential && !effectiveHasClientSecret) {
+        return {
+          type: 'error',
+          message: "Couldn't update integration.",
+          fieldErrors: {
+            clientId: null,
+            clientSecret:
+              'Either a client secret or federated credential must be enabled.',
+            tokenEndpoint: null,
+            userinfoEndpoint: null,
+            authorizationEndpoint: null,
+            additionalScopes: null,
+          },
+        } as const;
+      }
+
       const oidcIntegration = await this.storage.updateOIDCIntegration({
         oidcIntegrationId: args.oidcIntegrationId,
         clientId: clientIdResult.data,
