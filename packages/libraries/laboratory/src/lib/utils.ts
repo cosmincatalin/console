@@ -26,17 +26,21 @@ export async function asyncInterval(
   while (!signal?.aborted) {
     await fn();
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>(resolve => {
       const timer = setTimeout(resolve, delay);
 
       signal?.addEventListener(
         'abort',
         () => {
           clearTimeout(timer);
-          reject(new DOMException('Aborted', 'AbortError'));
+          resolve();
         },
         { once: true },
       );
     });
   }
+}
+
+export function isAsyncIterable<T>(val: unknown): val is AsyncIterable<T> {
+  return typeof Object(val)[Symbol.asyncIterator] === 'function';
 }

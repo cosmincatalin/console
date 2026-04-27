@@ -20,6 +20,7 @@ import { compressToEncodedURIComponent } from 'lz-string';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { QueryPlanSchema } from '@/lib/query-plan/schema';
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
@@ -45,7 +46,7 @@ import {
 } from '../ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '../ui/empty';
-import { Field, FieldGroup, FieldLabel } from '../ui/field';
+import { Field, FieldError, FieldGroup, FieldLabel } from '../ui/field';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resizable';
 import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -206,6 +207,10 @@ export const ResponseQueryPlan = ({ historyItem }: { historyItem?: LaboratoryHis
       return null;
     }
   }, [historyItem]);
+
+  if (!queryPlan) {
+    return null;
+  }
 
   return (
     <div className="relative size-full">
@@ -392,7 +397,7 @@ export const Response = ({ historyItem }: { historyItem?: LaboratoryHistoryReque
         )}
         {historyItem ? (
           <div className="ml-auto flex items-center gap-2">
-            {historyItem?.status && (
+            {!!historyItem?.status && (
               <Badge
                 className={cn('bg-green-400/10 text-green-500', {
                   'bg-red-400/10 text-red-500': isError,
@@ -461,6 +466,7 @@ export const Query = (props: {
     updateActiveOperation,
     collections,
     addOperationToCollection,
+    addCollection,
     addHistory,
     stopActiveOperation,
     addResponseToHistory,
@@ -542,16 +548,31 @@ export const Query = (props: {
         return;
       }
 
-      const status = response.status;
+      const extensionsResponse = (response.extensions?.response as {
+        status: number;
+        headers: Record<string, string>;
+      }) ?? {
+        status: 0,
+        headers: {},
+      };
+
+      delete response.extensions?.request;
+      delete response.extensions?.response;
+
+      if (Object.keys(response.extensions ?? {}).length === 0) {
+        delete response.extensions;
+      }
+
+      const status = extensionsResponse.status;
       const duration = performance.now() - startTime;
-      const responseText = await response.text();
+      const responseText = JSON.stringify(response, null, 2);
       const size = responseText.length;
 
       const newItemHistory = addHistory({
         status,
         duration,
         size,
-        headers: JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
+        headers: JSON.stringify(extensionsResponse.headers, null, 2),
         operation,
         preflightLogs: result?.logs ?? [],
         response: responseText,
@@ -601,15 +622,34 @@ export const Query = (props: {
         return;
       }
 
-      addOperationToCollection(value.collectionId, {
-        id: operation.id ?? '',
-        name: operation.name ?? '',
-        query: operation.query ?? '',
-        variables: operation.variables ?? '',
-        headers: operation.headers ?? '',
-        extensions: operation.extensions ?? '',
-        description: '',
-      });
+      const collection = collections.find(c => c.id === value.collectionId);
+
+      if (!collection) {
+        addCollection({
+          name: value.collectionId,
+          operations: [
+            {
+              id: operation.id ?? '',
+              name: operation.name ?? '',
+              query: operation.query ?? '',
+              variables: operation.variables ?? '',
+              headers: operation.headers ?? '',
+              extensions: operation.extensions ?? '',
+              description: '',
+            },
+          ],
+        });
+      } else {
+        addOperationToCollection(value.collectionId, {
+          id: operation.id ?? '',
+          name: operation.name ?? '',
+          query: operation.query ?? '',
+          variables: operation.variables ?? '',
+          headers: operation.headers ?? '',
+          extensions: operation.extensions ?? '',
+          description: '',
+        });
+      }
 
       setIsSaveToCollectionDialogOpen(false);
     },
@@ -653,10 +693,8 @@ export const Query = (props: {
       <Dialog open={isSaveToCollectionDialogOpen} onOpenChange={setIsSaveToCollectionDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add collection</DialogTitle>
-            <DialogDescription>
-              Add a new collection of operations to your laboratory.
-            </DialogDescription>
+            <DialogTitle>Save operation to collection</DialogTitle>
+            <DialogDescription>Save the current operation to a collection.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <form
@@ -667,33 +705,58 @@ export const Query = (props: {
               }}
             >
               <FieldGroup>
-                <saveToCollectionForm.Field name="collectionId">
-                  {field => {
-                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                {collections.length > 0 ? (
+                  <saveToCollectionForm.Field name="collectionId">
+                    {field => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
-                    return (
-                      <Field data-invalid={isInvalid}>
-                        <FieldLabel htmlFor={field.name}>Collection</FieldLabel>
-                        <Select
-                          name={field.name}
-                          value={field.state.value}
-                          onValueChange={field.handleChange}
-                        >
-                          <SelectTrigger id={field.name} aria-invalid={isInvalid}>
-                            <SelectValue placeholder="Select collection" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {collections.map(c => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    );
-                  }}
-                </saveToCollectionForm.Field>
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>Collection</FieldLabel>
+                          <Select
+                            name={field.name}
+                            value={field.state.value}
+                            onValueChange={field.handleChange}
+                          >
+                            <SelectTrigger id={field.name} aria-invalid={isInvalid}>
+                              <SelectValue placeholder="Select collection" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {collections.map(c => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      );
+                    }}
+                  </saveToCollectionForm.Field>
+                ) : (
+                  <saveToCollectionForm.Field name="collectionId">
+                    {field => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>New collection name</FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={e => field.handleChange(e.target.value)}
+                            aria-invalid={isInvalid}
+                            placeholder="Enter name of the collection"
+                            autoComplete="off"
+                          />
+                          {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                        </Field>
+                      );
+                    }}
+                  </saveToCollectionForm.Field>
+                )}
               </FieldGroup>
             </form>
           </div>
