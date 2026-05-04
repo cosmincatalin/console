@@ -25,6 +25,7 @@ import { TaskScheduler } from '@hive/workflows/kit';
 import { PasswordResetTask } from '@hive/workflows/tasks/password-reset';
 import { env } from './environment';
 import { createNewSession, validatePassword } from './supertokens-at-home/shared';
+import type { WorkloadIdentityFederationProvider } from './workload-identity-federation';
 
 type BroadcastOIDCIntegrationLog = (oidcOrganizationId: string, message: string) => void;
 
@@ -43,6 +44,7 @@ export async function registerSupertokensAtHome(
     refreshTokenKey: string;
     accessTokenKey: string;
   },
+  workloadIdentityFederation: WorkloadIdentityFederationProvider | null,
 ) {
   const supertokensStore = new SuperTokensStore(storage.pool, server.log);
 
@@ -1318,14 +1320,11 @@ export async function registerSupertokensAtHome(
           oidcIntegration.useFederatedCredential ||
           !oidcIntegration.encryptedClientSecret
         ) {
-          // Azure Workload Identity: use client_assertion with the federated token file
-          const tokenFilePath = env.azureFederatedTokenFile;
-          if (!tokenFilePath) {
-            req.log.error('AZURE_FEDERATED_TOKEN_FILE environment variable is not set');
-            broadcastLog(
-              oidcIntegration.id,
-              'Federated credential is configured but AZURE_FEDERATED_TOKEN_FILE environment variable is not set. ' +
-                'Ensure the pod has Azure Workload Identity configured.',
+          // Workload Identity Federation: use client_assertion with the cached federated token
+          const federatedToken = workloadIdentityFederation?.getToken() ?? null;
+          if (!federatedToken) {
+            req.log.error(
+              'Workload identity federation is not configured or the token is not yet available',
             );
             return rep.status(200).send({
               status: 'SIGN_IN_UP_NOT_ALLOWED',
@@ -1333,8 +1332,6 @@ export async function registerSupertokensAtHome(
             });
           }
 
-          const { readFile } = await import("node:fs/promises");
-          const federatedToken = await readFile(tokenFilePath, "utf-8");
           grantParams['client_assertion_type'] =
             'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
           grantParams['client_assertion'] = federatedToken;

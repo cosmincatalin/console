@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import zod from 'zod';
 import { OpenTelemetryConfigurationModel } from '@hive/service-common';
 
@@ -49,7 +50,6 @@ const EnvironmentModel = zod.object({
   FEATURE_FLAGS_OTEL_TRACING_ENABLED: emptyString(
     zod.union([zod.literal('1'), zod.literal('0')]).optional(),
   ),
-  AZURE_FEDERATED_TOKEN_FILE: emptyString(zod.string().optional()),
 });
 
 const CommerceModel = zod.object({
@@ -285,6 +285,32 @@ const LogModel = zod.object({
   ),
 });
 
+const OidcWorkloadFederationModel = zod.union([
+  zod.object({
+    OIDC_WORKLOAD_FEDERATION_IDENTITY_PROVIDER: zod.union([
+      zod.void(),
+      zod.literal(''),
+      zod.literal('0'),
+    ]),
+  }),
+  zod
+    .object({
+      OIDC_WORKLOAD_FEDERATION_IDENTITY_PROVIDER: zod.literal('azure'),
+      AZURE_FEDERATED_TOKEN_FILE: zod.string().min(1),
+    })
+    .superRefine((data, ctx) => {
+      try {
+        readFileSync(data.AZURE_FEDERATED_TOKEN_FILE, 'utf-8');
+      } catch {
+        ctx.addIssue({
+          code: zod.ZodIssueCode.custom,
+          path: ['AZURE_FEDERATED_TOKEN_FILE'],
+          message: `Cannot read federated token file at path '${data.AZURE_FEDERATED_TOKEN_FILE}'. Ensure the file exists and is readable.`,
+        });
+      }
+    }),
+]);
+
 const processEnv = process.env;
 
 const configs = {
@@ -311,6 +337,7 @@ const configs = {
   zendeskSupport: ZendeskSupportModel.safeParse(processEnv),
   tracing: OpenTelemetryConfigurationModel.safeParse(processEnv),
   hivePersistedDocuments: HivePersistedDocumentsSchema.safeParse(processEnv),
+  oidcWorkloadFederation: OidcWorkloadFederationModel.safeParse(processEnv),
 };
 
 const environmentErrors: Array<string> = [];
@@ -357,6 +384,7 @@ const s3AuditLog = extractConfig(configs.s3AuditLog);
 const zendeskSupport = extractConfig(configs.zendeskSupport);
 const tracing = extractConfig(configs.tracing);
 const hivePersistedDocuments = extractConfig(configs.hivePersistedDocuments);
+const oidcWorkloadFederation = extractConfig(configs.oidcWorkloadFederation);
 
 const hiveUsageConfig =
   hive.HIVE_USAGE === '1'
@@ -577,5 +605,11 @@ export const env = {
     /** Whether OTEL tracing should be enabled for all organizations. */
     otelTracingEnabled: base.FEATURE_FLAGS_OTEL_TRACING_ENABLED === '1',
   },
-  azureFederatedTokenFile: base.AZURE_FEDERATED_TOKEN_FILE ?? null,
+  oidcWorkloadFederation:
+    oidcWorkloadFederation.OIDC_WORKLOAD_FEDERATION_IDENTITY_PROVIDER === 'azure'
+      ? {
+          provider: 'azure' as const,
+          tokenFilePath: oidcWorkloadFederation.AZURE_FEDERATED_TOKEN_FILE,
+        }
+      : null,
 } as const;
