@@ -45,7 +45,7 @@ export class WorkloadIdentityFederationProvider {
 
   private async refresh(): Promise<void> {
     try {
-      this.currentToken = await readFile(this.tokenFilePath, 'utf-8');
+      this.currentToken = (await readFile(this.tokenFilePath, 'utf-8')).trim();
     } catch (err) {
       this.logger.error(
         { err },
