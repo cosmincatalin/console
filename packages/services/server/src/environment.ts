@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import zod from 'zod';
-import { OpenTelemetryConfigurationModel } from '@hive/service-common';
+import { OpenTelemetryConfigurationModel, resolveServerListenOptions } from '@hive/service-common';
 
 const isNumberString = (input: unknown) => zod.string().regex(/^\d+$/).safeParse(input).success;
 
@@ -21,6 +21,8 @@ const emptyString = <T extends zod.ZodType>(input: T) => {
 
 const EnvironmentModel = zod.object({
   PORT: emptyString(NumberFromString.optional()),
+  SERVER_HOST: emptyString(zod.string().optional()),
+  SERVER_HOST_IPV6_ONLY: emptyString(zod.union([zod.literal('1'), zod.literal('0')]).optional()),
   ENVIRONMENT: emptyString(zod.string().optional()),
   RELEASE: emptyString(zod.string().optional()),
   ENCRYPTION_SECRET: emptyString(zod.string()),
@@ -446,6 +448,10 @@ export const env = {
   },
   http: {
     port: base.PORT ?? 3001,
+    ...resolveServerListenOptions({
+      serverHost: base.SERVER_HOST,
+      serverHostIpv6Only: base.SERVER_HOST_IPV6_ONLY,
+    }),
   },
   postgres: {
     host: postgres.POSTGRES_HOST,
